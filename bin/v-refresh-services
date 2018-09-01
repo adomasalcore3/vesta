@@ -105,19 +105,23 @@ function check_and_initiatie_service(){
                 start $service_executable
         fi
 }
+
+# executes the normal command without args
+# checks if services defined in $VESTA/conf/vesta_services.conf are started
+
 function base_services(){
         arraylength=${#services[@]}
         for (( i=1; i<${arraylength}+1; i++ ));
         do
                 #echo $i " / " ${arraylength} " : " ${array[$i-1]}
-                if [[ -z ${custom_names[$i-1]}]]; then
+                if [[ -z ${custom_names[$i-1]} ]]; then
                         check_and_initiatie_service "${services[$i-1]}" "${custom_names[$i-1]}"
                 else
                         check_and_initiatie_service "${services[$i-1]}"
                 fi;
         done
 }
- if [ $# -eq 0 ]
+if [ $# -eq 0 ]
 then
         base_services;
 else
@@ -127,7 +131,12 @@ else
                 then
                         if [[ "$1" != "-nr"  &&  "$1" != "--no-return" ]];
                         then
-                                check_and_initiatie_service "$1"
+                                if [[ contains_in_array ("$(printf "(" ; printf "'%s' " "${services[@]}" ; printf ")")" "$1") ]]; then
+                                        $inumerator=$(get_array_inumerator "$(printf "(" ; printf "'%s' " "${services[@]}" ; printf ")")" "$1");
+                                        check_and_initiatie_service "$1" "${custom_names[$inumerator]}"
+                                else
+                                        check_and_initiatie_service "$1"
+                                fi;
                         else
                                 $(base_services) &> /dev/null
                         fi;
