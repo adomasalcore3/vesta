@@ -12,13 +12,16 @@ file="$VESTA/conf/vesta_services.conf";
 
 # Argument definition
 # Includes
-source $VESTA/func/main.sh
-source $VESTA/conf/vesta.conf
 
-# Check if file exists and if not, create it
+# source $VESTA/func/main.sh
+source $VESTA/conf/vesta.conf
+source ./main.sh
+
+# Check if services file exists and if not, create it
 if [[ file_exists == "0" ]]; then
-touch "$file";
-cat << 'EOF' > $file
+        sudo cat /dev/null > "$file";
+        (sudo tee $file <<- _EOF_
+#!/bin/bash
 ## declare the default data for service initiation
 declare -a custom_names=(
         "Mysql - Database Server"
@@ -48,8 +51,10 @@ declare -a services=(
         "proftpd"
         "fail2ban"
 )
-EOF;
+_EOF_
+) > /dev/null
 fi;
+
 source "$file";
 function start(){
         /etc/init.d/$1 start
