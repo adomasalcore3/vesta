@@ -18,7 +18,7 @@ source $VESTA/conf/vesta.conf
 # Check if file exists and if not, create it
 if [[ file_exists == "0" ]]; then
 touch "$file";
-cat << EOF > $file
+cat << 'EOF' > $file
 ## declare the default data for service initiation
 declare -a custom_names=(
         "Mysql - Database Server"
