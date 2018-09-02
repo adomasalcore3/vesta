@@ -13,9 +13,9 @@ file="$VESTA/conf/vesta_services.conf";
 # Argument definition
 # Includes
 
-# source $VESTA/func/main.sh
+source $VESTA/func/main.sh
 source $VESTA/conf/vesta.conf
-source ./main.sh
+# source ./main.sh
 
 # Check if services file exists and if not, create it
 if [[ file_exists == "0" ]]; then
