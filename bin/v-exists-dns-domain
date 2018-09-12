@@ -1,5 +1,5 @@
 #!/bin/bash
-# info: list dns domain
+# info: check dns domain
 # options: USER DOMAIN
 #
 # The function of obtaining the list of dns domain parameters.
