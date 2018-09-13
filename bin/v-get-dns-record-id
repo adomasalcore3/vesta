@@ -1,0 +1,59 @@
+#!/bin/bash
+# info: get dns domain ip
+# options: USER DOMAIN RECORD [VALUE]
+#
+# The function of obtaining the list of dns domain parameters.
+ #----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+ # Argument definition
+user=$1
+domain=$2
+record=$3
+value=$4
+ # Includes
+source $VESTA/func/main.sh
+
+checkup(){
+                while read str; do
+                                eval $str
+                                if [[ "$RECORD" == "$record" ]]; then
+                                        if [[ ! -z "$value" ]]; then
+                                                if [[ "value" == "$VALUE" ]]; then
+                                                        echo "$ID";
+                                                        return 1;
+                                                fi;
+                                        else
+                                                echo "$ID";
+                                                return 1;
+                                        fi;
+                                fi;
+                done < <(cat $USER_DATA/dns/$domain.conf)
+        echo "-1";
+        return 0;
+}
+
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+ check_args '3' "$#" 'USER DOMAIN RECORD [VALUE]'
+ch1=$(is_object_valid 'user' 'USER' "$user");
+ch2=$(is_object_valid 'dns' 'DOMAIN' "$domain");
+ #----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+ #user exists
+if [ ! -z "$ch1" ]; then
+        echo "$ch1";
+        exit;
+fi;
+ #file Exists
+if [ ! -z "$ch2" ]; then
+        echo "$ch2";
+        exit;
+fi;
+ #it's OK! Let's Proceed.
+# Parsing domain
+#it's OK! Let's Proceed.
+checking=$(checkup)
+echo "$checking";
