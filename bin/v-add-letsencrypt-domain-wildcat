@@ -34,23 +34,6 @@ source $VESTA/conf/vesta.conf
 # Additional argument formatting
 format_domain_idn
 
-get_file_line(){
-file=$1
-find=$2
-while IFS= read -r var
-do
-        if [[ "$var" =~ "$2" ]]; then
-                echo "$var";
-                return 1;
-        fi;
-done < "$file"
-}
-remove_substring(){
-        string="$1"
-        find="$2"
-        test=${string#"$find"};
-        echo "$test";
-}
 #----------------------------------------------------------#
 #                    Verifications                         #
 #----------------------------------------------------------#
@@ -63,6 +46,7 @@ is_object_valid 'user' 'USER' "$user"
 is_object_unsuspended 'user' 'USER' "$user"
 is_object_valid 'web' 'DOMAIN' "$domain"
 is_object_unsuspended 'web' 'DOMAIN' "$domain"
+
 
 #----------------------------------------------------------#
 #                       Action                             #
@@ -121,4 +105,5 @@ sed -i "/ $domain /d" $VESTA/data/queue/letsencrypt.pipe
 log_event "$OK" "$ARGUMENTS"
 
 exit
+
 
