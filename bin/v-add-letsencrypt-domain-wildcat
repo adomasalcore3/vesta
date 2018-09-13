@@ -1,0 +1,124 @@
+#!/usr/bin/env sh
+#!/bin/bash
+# info: adding letsencrypt ssl cetificate for domain
+# options: USER DOMAIN [RESTART] [NOTIFY]
+#
+# The function turns on SSL support for a domain. Parameter ssl_dir is a path
+# to directory where 2 or 3 ssl files can be found. Certificate file
+# domain.tld.crt and its key domain.tld.key  are mandatory. Certificate
+# authority domain.tld.ca file is optional. If home directory  parameter
+# (ssl_home) is not set, https domain uses public_shtml as separate
+# documentroot directory.
+
+# also, heres the guide uri:
+# http://strugglers.net/~andy/blog/2018/03/19/lets-encrypt-wildcard-certificates-acme-sh-and-automated-dns-verification/
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+# Argument definition
+user=$1
+domain=$2
+aliases="*.$2"
+restart=$3
+notify=$4
+
+#echo $aliases;
+#exit 0;
+# Includes
+source $VESTA/func/main.sh
+source $VESTA/func/domain.sh
+source $VESTA/conf/vesta.conf
+
+# Additional argument formatting
+format_domain_idn
+
+get_file_line(){
+file=$1
+find=$2
+while IFS= read -r var
+do
+        if [[ "$var" =~ "$2" ]]; then
+                echo "$var";
+                return 1;
+        fi;
+done < "$file"
+}
+remove_substring(){
+        string="$1"
+        find="$2"
+        test=${string#"$find"};
+        echo "$test";
+}
+#----------------------------------------------------------#
+#                    Verifications                         #
+#----------------------------------------------------------#
+
+check_args '2' "$#" 'USER DOMAIN [RESTART] [NOTIFY]'
+is_format_valid 'user' 'domain'
+is_system_enabled "$WEB_SYSTEM" 'WEB_SYSTEM'
+is_system_enabled "$WEB_SSL" 'SSL_SUPPORT'
+is_object_valid 'user' 'USER' "$user"
+is_object_unsuspended 'user' 'USER' "$user"
+is_object_valid 'web' 'DOMAIN' "$domain"
+is_object_unsuspended 'web' 'DOMAIN' "$domain"
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+if [ ! -e "$VESTA/acme" ]; then
+        $(mkdir -p "$VESTA/acme" );
+fi;
+cd "$VESTA/acme";
+output="";
+if [ ! -e "$VESTA/acme/acme.sh" ]; then
+        mkdir "$VESTA/acme/installer/" -p && cd  "$VESTA/acme/installer/";
+        $(git clone https://github.com/Neilpang/acme.sh.git)
+        ls -la "$VESTA/acme/"
+        export INSTALLONLINE=1
+        wget "https://raw.githubusercontent.com/Neilpang/acme.sh/master/acme.sh"
+        sudo bash ./acme.sh --install --home "$VESTA/acme/"
+        #sudo $VESTA/acme/installer/acme.sh/acme.sh --install --home  $VESTA/acme/ --config-home  $VESTA/acme/data --certhome   $VESTA/acme/certs
+fi;
+echo "$output";
+
+VESTA_USER="$user"
+DOMAIN="$domain"
+export VESTA_USER
+export DOMAIN
+#proceed with execution
+NSUPDATE_SERVER="$ns1" && NSUPDATE_KEY="$keypath/$newdomain.key" && $VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vestacp --dnssleep 5
+
+#----------------------------------------------------------#
+#                       Vesta                              #
+#----------------------------------------------------------#
+
+# Increasing domain value
+increase_user_value "$user" '$U_DNS_DOMAINS'
+increase_user_value "$user" '$U_DNS_RECORDS' "$records"
+
+# Restart named
+$BIN/v-restart-dns $restart
+check_result $? "DNS restart failed"
+
+# Logging
+log_history "added dns domain $domain"
+log_event "$OK" "$ARGUMENTS"
+
+# Restarting web
+$BIN/v-restart-web $restart
+if [ "$?" -ne 0  ]; then
+    send_notice 'LETSENCRYPT' "web server needs to be restarted manually"
+fi
+
+# Deleteing task from queue
+touch $VESTA/data/queue/letsencrypt.pipe
+sed -i "/ $domain /d" $VESTA/data/queue/letsencrypt.pipe
+
+# Logging
+log_event "$OK" "$ARGUMENTS"
+
+exit
+
