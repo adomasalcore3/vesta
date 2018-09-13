@@ -2,7 +2,7 @@
 # info: add dns record
 # options: USER DOMAIN RECORD TYPE VALUE [PRIORITY] [ID] [RESTART]
 #
-# The call is used for adding new DNS record. Complex records of TXT, MX and
+# The call is used for adding new DNS record. Complex records of TXT, MX, CAA and
 # SRV types can be used by a filling in the 'value' argument. The function also
 # gets an id parameter for definition of certain record identifier or for the
 # regulation of records.
@@ -38,7 +38,7 @@ if [ "$rtype" != 'MX' ] && [ "$rtype" != 'SRV' ]; then
 fi
 
 # Add trailing dot at the end of NS/CNAME/MX/PTR/SRV record
-if [[ $rtype =~ NS|CNAME|MX|PTR|SRV ]]; then
+if [[ $rtype =~ NS|CNAME|CAA|MX|PTR|SRV ]]; then
     trailing_dot=$(echo $dvalue | grep "\.$")
     if [ -z "$trailing_dot" ]; then
         dvalue="$dvalue."
