@@ -33,7 +33,23 @@ source $VESTA/conf/vesta.conf
 
 # Additional argument formatting
 format_domain_idn
-
+get_file_line(){
+file=$1
+find=$2
+while IFS= read -r var
+do
+        if [[ "$var" =~ "$2" ]]; then
+                echo "$var";
+                return 1;
+        fi;
+done < "$file"
+}
+remove_substring(){
+        string="$1"
+        find="$2"
+        test=${string#"$find"};
+        echo "$test";
+}
 #----------------------------------------------------------#
 #                    Verifications                         #
 #----------------------------------------------------------#
@@ -66,14 +82,48 @@ if [ ! -e "$VESTA/acme/acme.sh" ]; then
         sudo bash ./acme.sh --install --home "$VESTA/acme/"
         #sudo $VESTA/acme/installer/acme.sh/acme.sh --install --home  $VESTA/acme/ --config-home  $VESTA/acme/data --certhome   $VESTA/acme/certs
 fi;
-echo "$output";
 
+# Get the user contact Email
+data_mail=$($VESTA/bin/v-get-user-value "$user" "CONTACT");
+
+
+# ADD CAA's RECORD
+CAA=$($VESTA/bin/v-exists-dns-record "$user" "$domain" "$domain" "CAA")
+if [ "$CAA" = "0" ]; then
+        CAA2=$($VESTA/bin/v-exists-dns-record "$user" "$domain" "$domain" "CAA")
+        if [ "$CAA2" = "0" ]; then
+                # $VESTA/bin/v-add-dns-record
+                issue="0 issue \"letsencrypt.org\"";
+                mailt="0 iodef \"mailto:$data_mail\"";
+                $($VESTA/bin/v-add-dns-record "$user" "$domain" "$domain" "CAA" "$issue")
+                $($VESTA/bin/v-add-dns-record "$user" "$domain" "$domain" "CAA" "$mailt")
+        fi;
+fi;
+# define the global Vars
 VESTA_USER="$user"
 DOMAIN="$domain"
+
+# force them to the global scope
 export VESTA_USER
 export DOMAIN
+
 #proceed with execution
-NSUPDATE_SERVER="$ns1" && NSUPDATE_KEY="$keypath/$newdomain.key" && $VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vestacp --dnssleep 5
+
+#TESTING API
+#$VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vesta --dnssleep 5 --debug 3 --log --staging --force --test -f
+
+#REAL DEAL
+$VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vestacp --dnssleep 120 \
+--cert-file "$USER_DATA/ssl/$domain.crt" --key-file "$USER_DATA/ssl/$domain.key" --ca-file "$USER_DATA/ssl/$domain.ca" --fullchain-file "$USER_DATA/ssl/$domain.pem" \
+> /dev/null # Ignore the output sended from acme.
+
+# Adding certificate to user dir
+cp -f $USER_DATA/ssl/$domain.crt $HOMEDIR/$user/conf/web/ssl.$domain.crt
+cp -f $USER_DATA/ssl/$domain.key $HOMEDIR/$user/conf/web/ssl.$domain.key
+cp -f $USER_DATA/ssl/$domain.pem $HOMEDIR/$user/conf/web/ssl.$domain.pem
+if [ -e "$USER_DATA/ssl/$domain.ca" ]; then
+    cp -f $USER_DATA/ssl/$domain.ca $HOMEDIR/$user/conf/web/ssl.$domain.ca
+fi
 
 #----------------------------------------------------------#
 #                       Vesta                              #
@@ -84,7 +134,7 @@ increase_user_value "$user" '$U_DNS_DOMAINS'
 increase_user_value "$user" '$U_DNS_RECORDS' "$records"
 
 # Restart named
-$BIN/v-restart-dns $restart
+$VESTA/bin/v-restart-dns $restart
 check_result $? "DNS restart failed"
 
 # Logging
@@ -92,7 +142,7 @@ log_history "added dns domain $domain"
 log_event "$OK" "$ARGUMENTS"
 
 # Restarting web
-$BIN/v-restart-web $restart
+$VESTA/bin/v-restart-web $restart
 if [ "$?" -ne 0  ]; then
     send_notice 'LETSENCRYPT' "web server needs to be restarted manually"
 fi
@@ -105,5 +155,3 @@ sed -i "/ $domain /d" $VESTA/data/queue/letsencrypt.pipe
 log_event "$OK" "$ARGUMENTS"
 
 exit
-
-
