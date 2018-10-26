@@ -1,0 +1,83 @@
+#!/bin/bash
+# info: update letsencrypt ssl wildcat certificates
+# options: NONE
+#
+# The function for renew letsencrypt expired ssl certificate for all users
+
+
+#----------------------------------------------------------#
+#                    Variable&Function                     #
+#----------------------------------------------------------#
+
+# Importing system enviroment  as we run this script
+# mostly by cron wich not read it by itself
+source /etc/profile
+
+# Includes
+source $VESTA/func/main.sh
+source $VESTA/conf/vesta.conf
+
+#----------------------------------------------------------#
+#                       Action                             #
+#----------------------------------------------------------#
+
+# Defining user list
+users=$($BIN/v-list-users | tail -n+3 | awk '{ print $1 }')
+
+
+# Checking users
+for user in $users; do
+    USER_DATA=$VESTA/data/users/$user
+    # Checking user certificates
+    lecounter=0
+    for domain in $(search_objects 'web' 'LETSENCRYPT' 'wildcat' 'DOMAIN'); do
+        # Get the user contact Email
+        data_mail=$($VESTA/bin/v-get-user-value "$user" "CONTACT");
+
+        # ADD CAA's RECORD If it does not exists
+        CAA=$($VESTA/bin/v-exists-dns-record "$user" "$domain" "$domain" "CAA")
+        if [ "$CAA" = "0" ]; then
+                CAA2=$($VESTA/bin/v-exists-dns-record "$user" "$domain" "$domain" "CAA")
+                if [ "$CAA2" = "0" ]; then
+                        # $VESTA/bin/v-add-dns-record
+                        issue="0 issue \"letsencrypt.org\"";
+                        mailt="0 iodef \"mailto:$data_mail\"";
+                        $($VESTA/bin/v-add-dns-record "$user" "$domain" "$domain" "CAA" "$issue")
+                        $($VESTA/bin/v-add-dns-record "$user" "$domain" "$domain" "CAA" "$mailt")
+                fi;
+        fi;
+        # define the global Vars
+        VESTA_USER="$user"
+        DOMAIN="$domain"
+
+        # force them to the global scope
+        export VESTA_USER
+        export DOMAIN
+
+        #proceed with execution
+        aliases="*.$domain"
+        #TESTING API
+        #$VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vesta --dnssleep 5 --debug 3 --log --staging --force --test -f -r
+
+        #REAL DEAL
+        $VESTA/acme/acme.sh --issue -r -d "$domain" -d "$aliases" --dns dns_vestacp --dnssleep 60 \
+        --cert-file "$USER_DATA/ssl/$domain.crt" --key-file "$USER_DATA/ssl/$domain.key" --ca-file "$USER_DATA/ssl/$domain.ca" --fullchain-file "$USER_DATA/ssl/$domain.pem" \
+        --force > /dev/null
+
+        # Adding certificate to user dir
+        cp -f $USER_DATA/ssl/$domain.crt $HOMEDIR/$user/conf/web/ssl.$domain.crt
+        cp -f $USER_DATA/ssl/$domain.key $HOMEDIR/$user/conf/web/ssl.$domain.key
+        cp -f $USER_DATA/ssl/$domain.pem $HOMEDIR/$user/conf/web/ssl.$domain.pem
+        if [ -e "$USER_DATA/ssl/$domain.ca" ]; then
+            cp -f $USER_DATA/ssl/$domain.ca $HOMEDIR/$user/conf/web/ssl.$domain.ca
+        fi
+    done
+done
+#----------------------------------------------------------#
+#                       Vesta                              #
+#----------------------------------------------------------#
+
+# No Logging
+#log_event "$OK" "$EVENT"
+
+exit
