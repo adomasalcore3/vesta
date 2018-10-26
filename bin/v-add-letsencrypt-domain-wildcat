@@ -110,7 +110,7 @@ export DOMAIN
 #proceed with execution
 
 #TESTING API
-#$VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vesta --dnssleep 5 --debug 3 --log --staging --force --test -f
+#$VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vestacp --dnssleep 5 --debug 3 --log --staging --force --test -f
 
 #REAL DEAL
 $VESTA/acme/acme.sh --issue -d "$domain" -d "$aliases" --dns dns_vestacp --dnssleep 120 \
