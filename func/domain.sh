@@ -395,7 +395,6 @@ update_domain_zone() {
                                             180 )
 " > $zn_conf
     fields='$RECORD\t$TTL\tIN\t$TYPE\t$PRIORITY\t$VALUE'
-    CAA_FIELDS='$RECORD\tIN\t$TYPE\t$PRIORITY\t 0 $VALUE'
     while read line ; do
         IFS=$'\n'
         for key in $(echo $line|sed "s/' /'\n/g"); do
@@ -408,11 +407,7 @@ update_domain_zone() {
         fi
 
         if [ "$SUSPENDED" != 'yes' ]; then
-            if [ "$TYPE" = 'CAA' ]; then
-            eval echo -e "\"$CAA_FIELDS\""|sed "s/%quote%/'/g" >> $zn_conf
-            else
             eval echo -e "\"$fields\""|sed "s/%quote%/'/g" >> $zn_conf
-            fi;
         fi
     done < $USER_DATA/dns/$domain.conf
 }
