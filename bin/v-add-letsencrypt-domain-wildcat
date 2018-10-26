@@ -125,6 +125,12 @@ if [ -e "$USER_DATA/ssl/$domain.ca" ]; then
     cp -f $USER_DATA/ssl/$domain.ca $HOMEDIR/$user/conf/web/ssl.$domain.ca
 fi
 
+# Updating letsencrypt key
+if [ -z "$LETSENCRYPT" ]; then
+    add_object_key "web" 'DOMAIN' "$domain" 'LETSENCRYPT' 'FTP_USER'
+fi
+update_object_value 'web' 'DOMAIN' "$domain" '$LETSENCRYPT' 'wildcat'
+
 #----------------------------------------------------------#
 #                       Vesta                              #
 #----------------------------------------------------------#
