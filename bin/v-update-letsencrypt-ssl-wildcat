@@ -31,6 +31,13 @@ for user in $users; do
     # Checking user certificates
     lecounter=0
     for domain in $(search_objects 'web' 'LETSENCRYPT' 'wildcat' 'DOMAIN'); do
+    
+         # Working on Web domain check - if is suspended
+        webSuspended=$(grep "DOMAIN='$domain'" $USER_DATA/web.conf |grep "SUSPENDED='no")
+        if [ ! -z "$webSuspended" ]; then
+                continue; # dont update this one, go to the next one plz
+        fi;
+        
         # Get the user contact Email
         data_mail=$($VESTA/bin/v-get-user-value "$user" "CONTACT");
 
