@@ -691,6 +691,10 @@ chmod a+x /backup
 # Set directory color
 echo 'LS_COLORS="$LS_COLORS:di=00;33"' >> /etc/profile
 
+# Register /sbin/nologin and /usr/sbin/nologin
+echo "/sbin/nologin" >> /etc/shells
+echo "/usr/sbin/nologin" >> /etc/shells
+
 # Changing default systemd interval
 if [ "$release" -eq '7' ]; then
     # Hi Lennart
@@ -1127,6 +1131,9 @@ if [ "$dovecot" = 'yes' ]; then
     cp -rf $vestacp/dovecot /etc/
     cp -f $vestacp/logrotate/dovecot /etc/logrotate.d/
     chown -R root:root /etc/dovecot*
+    if [ "$release" -eq 7 ]; then
+        sed -i "s#namespace inbox {#namespace inbox {\n  inbox = yes#" /etc/dovecot/conf.d/15-mailboxes.conf
+    fi
     chkconfig dovecot on
     service dovecot start
     check_result $? "dovecot start failed"
